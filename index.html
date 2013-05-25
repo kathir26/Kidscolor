@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+	<title> Kids Coloring</title>
+	<link rel="stylesheet" type="text/css" href="styles/jquery-ui.css">
+	<link rel="stylesheet" type="text/css" href="styles/colorpicker.css">
+	<link rel="STYLESHEET" type="text/css" href="styles/Styles.css">
+	<script type="text/javascript" src="js/jquery-latest.js"></script>
+</head>
+<body>
+		<div class="contentbg">
+			<div class="leftcontent">
+				<div id="customWidget">
+					<div id="colorSelector2"><div style="background-color: #00ff00"></div></div>
+					<div id="color_pallete"></div>
+				</div>
+				<div class="icon-bg">
+				</div>			
+				
+				<div class="clear" align="center">
+				<br>
+					<button type="button" name="click_draw" id="click_draw" class="button">
+						<img src="images/pencil_button.png" width="16" height="16" alt="" align="absmiddle"> Draw
+					</button>
+					<br>
+					<button type="button" name="click_paint" id="click_paint" class="button">
+						<img src="images/paint_button.png" width="16" height="16" alt="" align="absmiddle"> Color
+					</button>
+					<br>
+					<button type="button" name="click_paint" id="click_paint" class="button" onclick="draw_image();">
+						<img src="images/clear.png" width="16" height="16" alt="" align="absmiddle"> Clear
+					</button>
+					
+				</div>
+			</div>
+			<div class="rightcontent">
+				<div class="rightcontentinner">
+					<div id="container"><canvas id="collage" width="718" height="468"></canvas></div>
+					<input type="hidden" id="color" name="color" value="#00ff00" />
+					<input type="hidden" name="hid_color" id="hid_color" value="0"/>
+					<input type="hidden" name="color_click" id="color_click" value="0" />
+					<input type="hidden" name="draw_click" id="draw_click" value="0" />
+			</div>
+					
+	</div>
+		<div id="helpdialog" style="display:none;">
+			<ul class="list">
+				<li>To draw, click <strong>Draw</strong> button on the left navigation. Then click and drag on  the canvas.</li>
+				<li>To color the image, click <strong>Color</strong> button and select a color by clicking the circle on the <strong>Color palette</strong> and tap the image.</li>
+				<li>To clear the canvas, click <strong>Clear</strong> button.</li>
+				<li>Save the image by clicking <strong>Save</strong> button on the bottom.</li>
+			</ul>
+		</div>
+	</div>
+	<form name="download_form" id="download_form" action="handDrawing" method="post">
+		<input type="hidden" id="data_down" name="data_down" value="" />
+	</form>
+<div id="footer">
+			<div class="fot_left"></div>
+			<div  class="foot_bg">
+				<span class="fleft">
+				</span>
+			</div>
+			<div class="fot_right"></div>
+		</div>
+	</div>
+	</div>
+</body>
+</html>
+<script type="text/javascript" src="js/colorpicker.js"></script>
+<script type="text/javascript" src="js/jquery-ui.js"></script>
+<script type="text/javascript" src="js/functions.js"></script>
+<style>
+     #container {  
+		 background: none repeat scroll 0 0 #FFFFFF;
+   		 height: 468px;
+   		 position: relative;
+   		 width: 718px;
+	 }
+</style>
+<script type="text/javascript" src="js/pencilDrawing.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+	color_picker();
+	draw_image();
+	$("#click_draw").click(function(){
+		$('#color_click').val(0);
+		$('#draw_click').val(1);
+		$('canvas').removeClass('fill_pointer').addClass('pencil_pointer');
+	});
+	$("#click_paint").click(function(){
+		$('#draw_click').val(0);
+		$('#color_click').val(1);
+		$('canvas').removeClass('pencil_pointer').addClass('fill_pointer');
+	});
+});
+function findPos(obj) {
+    var curleft = 0, curtop = 0;
+    if (obj.offsetParent) {
+        do {
+            curleft += obj.offsetLeft;
+            curtop += obj.offsetTop;
+        } while (obj = obj.offsetParent);
+        return { x: curleft, y: curtop };
+    }
+    return undefined;
+}
+function draw_image()
+{
+ 	var imageObj = new Image();
+    imageObj.onload = function(){
+       drawImage(this);
+    };
+	
+  imageObj.src = "images/canvas_white.png";
+}
+function ExportToImage(strMime)
+{
+	var canvas 			= document.getElementById("collage");
+	var image_base64   = canvas.toDataURL(strMime);
+	$("#data_down").val(image_base64);
+	$("#download_form").trigger("submit");
+}
+function drawImage(imageObj)
+{
+    var canvas = document.getElementById("collage");
+    var context = canvas.getContext("2d");
+    var sourceWidth  = imageObj.width;
+    var sourceHeight = imageObj.height;
+   context.drawImage(imageObj, 0, 0,sourceWidth,sourceHeight);
+
+    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+	colorLayerData = context.getImageData(0, 0, canvas.width, canvas.height);
+	
+    // draw the altered image if we manipulated the image data
+    context.putImageData(imageData, 0, 0);
+}
+var pixelStack = new Array();
+function HexToRGB(Hex)
+{
+	var Long = parseInt(Hex.replace(/^#/, ""), 16);
+	return {
+		R: (Long >>> 16) & 0xff,
+		G: (Long >>> 8) & 0xff,
+		B: Long & 0xff
+	};
+}
+var canvas  = document.getElementById("collage");
+var context = canvas.getContext("2d");
+var colorLayerData;
+colorLayerData   = context.getImageData(0, 0, canvas.width, canvas.height);
+
+function canvas_paint()
+{
+	$("#collage").live("click", function(e){
+		var pos    = findPos(this);
+		var mouseX = e.pageX - pos.x;
+    	var mouseY = e.pageY - pos.y;
+		if($("#color_click").val() == 1)
+		{
+			$("#loader").show();
+			paintAt(mouseX, mouseY);
+		}
+	});
+}
+$("#click_paint").click(function(){
+	canvas_paint();
+});
+
+function paintAt(mouseX, mouseY)
+{
+	flood(mouseX,mouseY);
+}
+
+function flood(startX, startY)
+{
+	var pixelPos = (startY*canvas.width + startX)*4;
+	var r = colorLayerData.data[pixelPos + 0];
+	var g = colorLayerData.data[pixelPos + 1];
+	var b = colorLayerData.data[pixelPos + 2];
+	var a = colorLayerData.data[pixelPos + 3];
+	
+	clickedColorR = r;
+	clickedColorG = g;
+	clickedColorB = b;
+	var curColorIndex = HexToRGB(document.getElementById('color').value);
+	newColorR = curColorIndex['R'];
+	newColorG = curColorIndex['G'];
+	newColorB = curColorIndex['B'];
+	if(clickedColorR == newColorR && clickedColorG == newColorG && clickedColorB == newColorB)
+	{
+		$("#loader").hide();
+	 	return false;
+	}
+    pixelStack = [[startX, startY]];
+	floodFill(pixelPos);
+} 
+
+function floodFill(pixelPos)
+{
+	var newPos, x, y, pixelPos;
+	while(pixelStack.length)
+    {
+		newPos = pixelStack.pop();
+		x = newPos[0];
+		y = newPos[1];
+		pixelPos = (x + y * canvas.width) * 4;
+		if(matchClickedColor(pixelPos))
+		{
+			colorLayerData.data[pixelPos + 0]   = newColorR; // red
+		    colorLayerData.data[pixelPos + 1]   = newColorG; // green
+		    colorLayerData.data[pixelPos + 2]   = newColorB; // blue
+		}
+		
+		/* North */
+		pixelPos = (x + ( parseInt(y - 1,10)  * canvas.width)) * 4;
+		if(matchClickedColor(pixelPos))
+		{
+			pixelStack.push([x, parseInt(y - 1,10)]);
+		}
+		
+		/* South */
+		
+		pixelPos = (x + (parseInt(y + 1,10)  * canvas.width)) * 4;
+		if(matchClickedColor(pixelPos))
+		{
+			pixelStack.push([x, parseInt(y + 1,10)]);
+		}
+		
+		
+		 /* West */
+		 
+		pixelPos = (parseInt(x - 1,10) + y * canvas.width) * 4;
+		if(matchClickedColor(pixelPos))
+		{
+			pixelStack.push([parseInt(x - 1,10), y]);
+		}
+		
+		 /* East */
+		 
+		pixelPos = (parseInt(x + 1,10) + y * canvas.width) * 4;
+		if(matchClickedColor(pixelPos))
+		{
+			pixelStack.push([parseInt(x + 1,10), y]);
+		}
+    }
+		$("#loader").hide();
+	context.putImageData(colorLayerData, 0, 0);
+}
+function isSimilarAsWhite(r,g,b)
+{
+    return (r >= 88 && g >= 88 && b >= 88);
+}
+function matchClickedColor(pixelPos)
+{
+	r = colorLayerData.data[pixelPos];	
+	g = colorLayerData.data[pixelPos+1];	
+	b = colorLayerData.data[pixelPos+2];
+	
+	// If the current pixel matches the clicked color
+	if(r == clickedColorR && g == clickedColorG && b == clickedColorB)
+		return true;
+
+	// If current pixel matches the new color
+	if(r == newColorR && g == newColorG && b == newColorB)
+		return false;
+	//return true;
+	if(isSimilarAsWhite(r,g,b) && isSimilarAsWhite(clickedColorR,clickedColorG,clickedColorB))
+		return true;
+}
+</script>
